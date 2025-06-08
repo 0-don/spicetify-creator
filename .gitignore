@@ -146,3 +146,4 @@ out
 
 yarn.lock
 bun.lock*
+dist

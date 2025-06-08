@@ -1,6 +1,6 @@
-import glob from 'glob'
-import fs from 'fs'
-import path from 'path'
+import fs from 'fs';
+import { glob } from 'glob';
+import path from 'path';
 
 function partition(array: any[], isValid: (e: any) => boolean): [any[], any[]] {
   return array.reduce(([pass, fail], elem) => {

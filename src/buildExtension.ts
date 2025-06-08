@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import esbuild from "esbuild";
 import fs from "fs";
-import glob from "glob";
+import { glob } from "glob";
 import os from "os";
 import path from "path";
 import { minifyCSS, minifyFile } from "./helpers/minify";
@@ -41,30 +41,9 @@ import main from \'${appPath.replace(/\\/g, "/")}\'
   `.trim()
   );
 
-  esbuild
-    .build({
-      entryPoints: [indexPath],
-      outfile: compiledExtension,
-      ...esbuildOptions,
-      watch: watch
-        ? {
-            async onRebuild(error: any, result: any) {
-              if (error) console.error(error);
-              else {
-                await afterBundle();
-              }
-            },
-          }
-        : undefined,
-    })
-    .then(async (r: any) => {
-      await afterBundle();
-      return r;
-    });
-
   const afterBundle = async () => {
     if (fs.existsSync(compiledExtensionCSS)) {
-      console.log("Bundling css and js...");
+      console.log("!!Bundling css and js...");
 
       let css = fs.readFileSync(compiledExtensionCSS, "utf-8");
       if (minify) {
@@ -111,4 +90,34 @@ import main from \'${appPath.replace(/\\/g, "/")}\'
 
     console.log(chalk.green("Build succeeded."));
   };
+
+  const buildOptions = {
+    entryPoints: [indexPath],
+    outfile: compiledExtension,
+    ...esbuildOptions,
+  };
+
+  if (watch) {
+    const ctx = await esbuild.context({
+      ...buildOptions,
+      plugins: [
+        ...(buildOptions.plugins || []),
+        {
+          name: "rebuild-notify",
+          setup(build: any) {
+            build.onEnd(async (result: any) => {
+              if (result.errors.length === 0) {
+                await afterBundle();
+              }
+            });
+          },
+        },
+      ],
+    });
+    await ctx.watch();
+    await afterBundle();
+  } else {
+    await esbuild.build(buildOptions);
+    await afterBundle();
+  }
 };
